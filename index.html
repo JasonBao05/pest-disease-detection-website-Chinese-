@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>农作物病虫害智能监测系统</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green-primary: #2c5f2d;
+            --green-dark: #1e4620;
+            --green-light: #4a7c3a;
+            --green-mint: #6b9e5a;
+            --green-bg: #f1f8e9;
+            --amber-primary: #f39c12;
+            --amber-dark: #d68910;
+            --amber-bg: #fff8e1;
+            --red-warn: #e74c3c;
+            --text-main: #2c3e50;
+            --text-sub: #7f8c8d;
+            --border: #e0e6ed;
+        }
+
+        body {
+            font-family: -apple-system, 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            font-size: 17px;
+            background: #f5f7fa;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(243, 156, 18, 0.08) 0%, transparent 50%),
+                linear-gradient(135deg, #f1f8e9 0%, #fff8e1 100%);
+            min-height: 100vh;
+            color: var(--text-main);
+            padding: 25px;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        /* ==================== 顶部 Hero ==================== */
+        header {
+            background: linear-gradient(135deg, #2c5f2d 0%, #4a7c3a 50%, #6b9e5a 100%);
+            color: white;
+            padding: 44px 40px;
+            border-radius: 22px;
+            box-shadow: 0 10px 40px rgba(44, 95, 45, 0.25);
+            margin-bottom: 26px;
+            position: relative;
+            overflow: hidden;
+        }
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%; right: -20%;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1), transparent 70%);
+            border-radius: 50%;
+        }
+        header::after {
+            content: '🌾';
+            position: absolute;
+            bottom: -40px; right: 40px;
+            font-size: 220px;
+            opacity: 0.08;
+        }
+        header .header-inner {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 22px;
+        }
+        header h1 { font-size: 34px; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.5px; }
+        header .subtitle { opacity: 0.92; font-size: 17px; line-height: 1.6; }
+        .header-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+        .hbadge {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 9px 18px;
+            border-radius: 22px;
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* ==================== 上传区 ==================== */
+        .upload-section {
+            background: white;
+            padding: 36px;
+            border-radius: 22px;
+            box-shadow: 0 4px 22px rgba(0,0,0,0.05);
+            margin-bottom: 26px;
+        }
+
+        .upload-section h2 {
+            color: var(--green-primary);
+            font-size: 22px;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+        .upload-section h2::before {
+            content: '';
+            display: inline-block;
+            width: 5px; height: 24px;
+            background: linear-gradient(180deg, var(--green-primary), var(--green-mint));
+            border-radius: 3px;
+        }
+
+        /* 模式切换 */
+        .mode-switcher {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 22px 20px;
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            background: #fafbfc;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .mode-btn:hover {
+            border-color: var(--green-mint);
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+        .mode-btn.active {
+            border-color: var(--green-primary);
+            background: linear-gradient(135deg, var(--green-bg), #dcedc8);
+            box-shadow: 0 4px 16px rgba(44, 95, 45, 0.15);
+        }
+        .mode-btn.active.disease-mode {
+            border-color: var(--amber-primary);
+            background: linear-gradient(135deg, var(--amber-bg), #ffecb3);
+            box-shadow: 0 4px 16px rgba(243, 156, 18, 0.18);
+        }
+        .mode-btn .mode-emoji { font-size: 32px; }
+        .mode-btn .mode-text {
+            text-align: left;
+        }
+        .mode-btn .mode-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 3px;
+        }
+        .mode-btn.active .mode-title { color: var(--green-primary); }
+        .mode-btn.active.disease-mode .mode-title { color: var(--amber-dark); }
+        .mode-btn .mode-desc {
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+
+        /* Drop zone */
+        .drop-zone {
+            border: 2px dashed #a5d6a7;
+            border-radius: 18px;
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #f9fcf9, #f1f8e9);
+        }
+        .drop-zone:hover {
+            border-color: var(--green-primary);
+            background: linear-gradient(135deg, #f1f8e9, #dcedc8);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(76, 175, 80, 0.15);
+        }
+        .drop-zone.dragover {
+            border-color: var(--green-primary);
+            background: #dcedc8;
+            transform: scale(1.01);
+        }
+        .drop-zone.disease-mode {
+            border-color: #ffd54f;
+            background: linear-gradient(135deg, #fffef7, var(--amber-bg));
+        }
+        .drop-zone.disease-mode:hover {
+            border-color: var(--amber-primary);
+            background: linear-gradient(135deg, var(--amber-bg), #ffecb3);
+        }
+        .drop-zone input[type="file"] { display: none; }
+        .drop-zone .icon-big {
+            font-size: 64px;
+            margin-bottom: 16px;
+            display: block;
+            filter: drop-shadow(0 4px 8px rgba(44, 95, 45, 0.2));
+        }
+        .drop-zone .drop-text {
+            color: var(--green-primary);
+            font-size: 19px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .drop-zone.disease-mode .drop-text { color: var(--amber-dark); }
+        .drop-zone .drop-hint {
+            color: var(--text-sub);
+            font-size: 15px;
+        }
+
+        .preview-wrapper {
+            margin-top: 22px;
+            text-align: center;
+            display: none;
+        }
+        .preview-wrapper img {
+            max-width: 100%;
+            max-height: 320px;
+            border-radius: 14px;
+            box-shadow: 0 4px 22px rgba(0,0,0,0.1);
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, var(--green-primary), var(--green-light));
+            color: white;
+            border: none;
+            padding: 15px 48px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 22px;
+            box-shadow: 0 4px 16px rgba(44, 95, 45, 0.3);
+        }
+        .btn-primary.disease-mode {
+            background: linear-gradient(135deg, var(--amber-dark), var(--amber-primary));
+            box-shadow: 0 4px 16px rgba(243, 156, 18, 0.3);
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(44, 95, 45, 0.4);
+        }
+        .btn-primary.disease-mode:hover:not(:disabled) {
+            box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+        }
+        .btn-primary:disabled {
+            background: #999;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Loading */
+        .loading-box {
+            background: white;
+            border-radius: 22px;
+            padding: 70px 34px;
+            text-align: center;
+            box-shadow: 0 4px 22px rgba(0,0,0,0.05);
+        }
+        .loading-box .spinner {
+            display: inline-block;
+            width: 56px; height: 56px;
+            border: 5px solid var(--green-bg);
+            border-top-color: var(--green-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 22px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-box .status {
+            color: var(--green-primary);
+            font-size: 19px;
+            font-weight: 600;
+            margin-bottom: 9px;
+        }
+        .loading-box .sub-status {
+            color: var(--text-sub);
+            font-size: 15px;
+        }
+
+        /* 单栏结果 */
+        .result-column {
+            background: white;
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: 0 4px 22px rgba(0,0,0,0.06);
+            animation: fadeInUp 0.5s ease-out;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .column-header {
+            padding: 26px 36px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .column-header.pest {
+            background: linear-gradient(135deg, var(--green-primary), var(--green-mint));
+        }
+        .column-header.disease {
+            background: linear-gradient(135deg, var(--amber-dark), var(--amber-primary));
+        }
+        .column-header::before {
+            content: '';
+            position: absolute;
+            top: -50%; right: -30%;
+            width: 240px; height: 240px;
+            background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 70%);
+            border-radius: 50%;
+        }
+        .column-header-content {
+            position: relative; z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+        .column-header h3 {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header-emoji {
+            font-size: 32px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+        .header-stats {
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(10px);
+            padding: 8px 18px;
+            border-radius: 22px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .column-body {
+            padding: 30px 36px;
+        }
+
+        /* 统计小卡片 */
+        .mini-stats {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .mini-stat {
+            flex: 1;
+            background: var(--green-bg);
+            padding: 18px 22px;
+            border-radius: 14px;
+            border-left: 5px solid var(--green-primary);
+        }
+        .mini-stat.amber {
+            background: var(--amber-bg);
+            border-left-color: var(--amber-primary);
+        }
+        .mini-stat .mini-label {
+            font-size: 14px;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+        }
+        .mini-stat .mini-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--green-primary);
+        }
+        .mini-stat.amber .mini-value { color: var(--amber-dark); }
+
+        /* 结果图 */
+        .result-image-wrapper {
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 2px 14px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        .result-image {
+            width: 100%;
+            display: block;
+        }
+
+        /* 害虫/病害卡片 */
+        .item-card {
+            background: #fafbfc;
+            border: 1px solid var(--border);
+            border-left: 5px solid var(--green-primary);
+            padding: 26px;
+            border-radius: 14px;
+            margin-bottom: 18px;
+            transition: all 0.3s;
+        }
+        .item-card.disease-card {
+            border-left-color: var(--amber-primary);
+            background: linear-gradient(135deg, #fafbfc, #fffbf0);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .item-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--green-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .disease-card .item-title { color: var(--amber-dark); }
+
+        .item-badge {
+            background: var(--red-warn);
+            color: white;
+            padding: 6px 18px;
+            border-radius: 22px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .conf-badge {
+            background: linear-gradient(135deg, var(--amber-primary), var(--amber-dark));
+            color: white;
+            padding: 6px 18px;
+            border-radius: 22px;
+            font-size: 15px;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(243, 156, 18, 0.3);
+        }
+        .crop-label {
+            display: inline-block;
+            background: white;
+            color: var(--amber-dark);
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 15px;
+            border: 1.5px solid var(--amber-primary);
+            font-weight: 600;
+        }
+
+        /* 信息段（放大字号） */
+        .info-block { margin-top: 16px; }
+        .info-label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--green-primary);
+            margin-bottom: 7px;
+        }
+        .disease-card .info-label { color: var(--amber-dark); }
+        .info-content {
+            color: #3a3a3a;
+            font-size: 17px;
+            line-height: 1.8;
+        }
+
+        /* Tag */
+        .tag-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+        .tag {
+            display: inline-block;
+            background: var(--green-bg);
+            color: var(--green-primary);
+            padding: 6px 15px;
+            border-radius: 15px;
+            font-size: 15px;
+            font-weight: 500;
+        }
+        .disease-card .tag {
+            background: var(--amber-bg);
+            color: var(--amber-dark);
+        }
+
+        /* 防治建议框 */
+        .treatment-box {
+            background: white;
+            padding: 18px 22px;
+            border-radius: 12px;
+            margin-top: 8px;
+            white-space: pre-line;
+            line-height: 1.9;
+            color: #333;
+            font-size: 17px;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--green-mint);
+        }
+        .disease-card .treatment-box { border-left-color: var(--amber-primary); }
+
+        /* Top3 chips - 可点击 */
+        .top3-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .top3-chip {
+            flex: 1;
+            background: white;
+            padding: 16px 16px;
+            border-radius: 14px;
+            border: 2px solid var(--border);
+            text-align: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+        .top3-chip:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 14px rgba(243, 156, 18, 0.2);
+            border-color: var(--amber-primary);
+        }
+        .top3-chip.selected {
+            border-color: var(--amber-primary);
+            background: linear-gradient(135deg, #fff, var(--amber-bg));
+            box-shadow: 0 4px 14px rgba(243, 156, 18, 0.3);
+        }
+        .top3-chip.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 6px; right: 8px;
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--amber-primary);
+        }
+        .top3-chip .rank {
+            display: block;
+            color: var(--amber-dark);
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .top3-chip .chip-name {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 5px;
+            font-size: 15px;
+            line-height: 1.35;
+        }
+        .top3-chip .chip-conf {
+            color: var(--amber-dark);
+            font-weight: 700;
+            font-size: 17px;
+        }
+        .top3-hint {
+            color: var(--text-sub);
+            font-size: 13px;
+            margin-top: 6px;
+            font-style: italic;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            background: linear-gradient(135deg, #fafbfc, white);
+            border: 2px dashed var(--border);
+            padding: 40px 24px;
+            border-radius: 14px;
+            text-align: center;
+            color: var(--text-sub);
+        }
+        .empty-state .empty-icon {
+            font-size: 56px;
+            margin-bottom: 14px;
+            opacity: 0.5;
+        }
+        .empty-state .empty-text {
+            font-size: 17px;
+            margin-bottom: 6px;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+        .empty-state .empty-hint {
+            font-size: 15px;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            color: var(--text-sub);
+            padding: 30px 20px;
+            margin-top: 30px;
+            font-size: 14px;
+        }
+        footer .tech-tags {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        footer .tech-tag {
+            background: white;
+            padding: 7px 18px;
+            border-radius: 22px;
+            font-size: 13px;
+            border: 1px solid var(--border);
+            color: var(--green-primary);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-inner">
+                <div>
+                    <h1>🌾 农作物病虫害智能监测系统</h1>
+                    <p class="subtitle">基于深度学习的害虫检测与病害诊断，为精准农业提供 AI 决策支持</p>
+                </div>
+                <div class="header-badges">
+                    <span class="hbadge">🐛 38 种害虫</span>
+                    <span class="hbadge">🍃 71 类病害</span>
+                    <span class="hbadge">⚡ YOLO11</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="upload-section">
+            <h2>选择检测类型</h2>
+
+            <!-- 模式切换按钮 -->
+            <div class="mode-switcher">
+                <div class="mode-btn active" id="modePest" onclick="switchMode('pest')">
+                    <span class="mode-emoji">🐛</span>
+                    <div class="mode-text">
+                        <div class="mode-title">害虫检测</div>
+                        <div class="mode-desc">识别虫体、标注位置</div>
+                    </div>
+                </div>
+                <div class="mode-btn disease-mode" id="modeDisease" onclick="switchMode('disease')">
+                    <span class="mode-emoji">🍃</span>
+                    <div class="mode-text">
+                        <div class="mode-title">病害诊断</div>
+                        <div class="mode-desc">识别叶片病症、给出防治</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <input type="file" id="fileInput" accept="image/*">
+                <span class="icon-big" id="uploadIcon">📸</span>
+                <div class="drop-text" id="uploadText">上传害虫或受害作物图像</div>
+                <div class="drop-hint">点击选择图片 · 或将图片拖拽到此处 · 支持 JPG / PNG / BMP</div>
+            </div>
+
+            <div class="preview-wrapper" id="previewWrapper">
+                <img id="preview">
+            </div>
+
+            <div style="text-align: center;">
+                <button class="btn-primary" id="uploadBtn" onclick="uploadImage()">
+                    <span>🔍</span><span>开始 AI 检测</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="resultArea"></div>
+
+        <footer>
+            <div>基于 YOLO11 深度学习模型 · 害虫检测 + 病害分类双任务</div>
+            <div class="tech-tags">
+                <span class="tech-tag">Flask</span>
+                <span class="tech-tag">PyTorch</span>
+                <span class="tech-tag">Ultralytics</span>
+                <span class="tech-tag">IP102 · PlantVillage</span>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        let currentMode = 'pest';  // 'pest' or 'disease'
+        let lastDiseaseResult = null;  // 保存最后一次病害结果，用于切换 Top3
+
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const previewWrapper = document.getElementById('previewWrapper');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const resultArea = document.getElementById('resultArea');
+        const dropZone = document.getElementById('dropZone');
+        const modePestBtn = document.getElementById('modePest');
+        const modeDiseaseBtn = document.getElementById('modeDisease');
+        const uploadIcon = document.getElementById('uploadIcon');
+        const uploadText = document.getElementById('uploadText');
+
+        // 模式切换
+        function switchMode(mode) {
+            currentMode = mode;
+            if (mode === 'pest') {
+                modePestBtn.classList.add('active');
+                modeDiseaseBtn.classList.remove('active');
+                dropZone.classList.remove('disease-mode');
+                uploadBtn.classList.remove('disease-mode');
+                uploadIcon.textContent = '📸';
+                uploadText.textContent = '上传害虫或受害作物图像';
+            } else {
+                modeDiseaseBtn.classList.add('active');
+                modePestBtn.classList.remove('active');
+                dropZone.classList.add('disease-mode');
+                uploadBtn.classList.add('disease-mode');
+                uploadIcon.textContent = '🍃';
+                uploadText.textContent = '上传作物叶片图像';
+            }
+            resultArea.innerHTML = '';  // 切换模式清空之前的结果
+        }
+
+        // 文件选择预览
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) showPreview(file);
+        });
+
+        function showPreview(file) {
+            preview.src = URL.createObjectURL(file);
+            previewWrapper.style.display = 'block';
+        }
+
+        // 拖拽上传
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+            dropZone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); });
+        });
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('dragover'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                showPreview(files[0]);
+            }
+        });
+
+        async function uploadImage() {
+            const file = fileInput.files[0];
+            if (!file) { alert('请先选择图片'); return; }
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<span>⏳</span><span>检测中...</span>';
+
+            resultArea.innerHTML = `
+                <div class="loading-box">
+                    <div class="spinner"></div>
+                    <div class="status">AI 正在进行${currentMode === 'pest' ? '害虫检测' : '病害诊断'}</div>
+                    <div class="sub-status">请稍候</div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await response.json();
+                renderResult(data);
+            } catch (err) {
+                resultArea.innerHTML = `<div class="loading-box"><div class="status" style="color:#e74c3c">❌ 请求失败: ${err.message}</div></div>`;
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<span>🔍</span><span>开始 AI 检测</span>';
+            }
+        }
+
+        function renderResult(data) {
+            if (!data.success) {
+                resultArea.innerHTML = `<div class="loading-box"><div class="status" style="color:#e74c3c">❌ ${data.error || '检测失败'}</div></div>`;
+                return;
+            }
+
+            let contentHtml, headerClass, headerTitle, headerSub;
+
+            if (currentMode === 'pest') {
+                contentHtml = renderPest(data.pest);
+                headerClass = 'pest';
+                headerTitle = '<span class="header-emoji">🐛</span>害虫检测结果';
+                headerSub = 'YOLO 目标检测';
+            } else {
+                lastDiseaseResult = data.disease;
+                contentHtml = renderDisease(data.disease, 0);  // 默认展示 Top1
+                headerClass = 'disease';
+                headerTitle = '<span class="header-emoji">🍃</span>病害诊断结果';
+                headerSub = 'YOLO 图像分类';
+            }
+
+            resultArea.innerHTML = `
+                <div class="result-column">
+                    <div class="column-header ${headerClass}">
+                        <div class="column-header-content">
+                            <h3>${headerTitle}</h3>
+                            <span class="header-stats">${headerSub}</span>
+                        </div>
+                    </div>
+                    <div class="column-body">${contentHtml}</div>
+                </div>
+            `;
+
+            resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderPest(pest) {
+            if (!pest || pest.error) {
+                return `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">检测出错</div><div class="empty-hint">${pest?.error || ''}</div></div>`;
+            }
+
+            if (pest.total_count === 0) {
+                return `
+                    <div class="mini-stats">
+                        <div class="mini-stat">
+                            <div class="mini-label">检测结果</div>
+                            <div class="mini-value">未检出害虫</div>
+                        </div>
+                    </div>
+                    <div class="result-image-wrapper">
+                        <img src="${pest.result_image}" class="result-image">
+                    </div>
+                    <div class="empty-state">
+                        <div class="empty-icon">✓</div>
+                        <div class="empty-text">未检测到已知害虫</div>
+                        <div class="empty-hint">本系统支持识别 38 类常见农业害虫</div>
+                    </div>
+                `;
+            }
+
+            let html = `
+                <div class="mini-stats">
+                    <div class="mini-stat">
+                        <div class="mini-label">检出数量</div>
+                        <div class="mini-value">${pest.total_count} 只</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-label">害虫种类</div>
+                        <div class="mini-value">${pest.pest_types} 种</div>
+                    </div>
+                </div>
+                <div class="result-image-wrapper">
+                    <img src="${pest.result_image}" class="result-image">
+                </div>
+            `;
+
+            pest.pest_summary.forEach(p => {
+                const crops = p.crops_affected.map(c => `<span class="tag">${c}</span>`).join('');
+                html += `
+                    <div class="item-card">
+                        <div class="item-header">
+                            <div class="item-title"><span>🐛</span>${p.chinese_name}</div>
+                            <span class="item-badge">${p.count} 只</span>
+                        </div>
+                        <div class="info-block">
+                            <div class="info-label">📖 简介</div>
+                            <div class="info-content">${p.intro}</div>
+                        </div>
+                        <div class="info-block">
+                            <div class="info-label">⚠️ 主要危害</div>
+                            <div class="info-content">${p.harm}</div>
+                        </div>
+                        <div class="info-block">
+                            <div class="info-label">🌾 易感作物</div>
+                            <div class="tag-group">${crops}</div>
+                        </div>
+                        <div class="info-block">
+                            <div class="info-label">🌿 防治建议</div>
+                            <div class="treatment-box">${p.treatment}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            return html;
+        }
+
+        function renderDisease(disease, selectedIdx) {
+            if (!disease || disease.error) {
+                return `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">诊断出错</div><div class="empty-hint">${disease?.error || ''}</div></div>`;
+            }
+
+            const selected = disease.top3[selectedIdx];
+            const crops = selected.crops_affected.map(c => `<span class="tag">${c}</span>`).join('');
+
+            // Top3 chips（可点击）
+            const top3Html = disease.top3.map((d, i) => `
+                <div class="top3-chip ${i === selectedIdx ? 'selected' : ''}" onclick="selectDiseaseCandidate(${i})">
+                    <span class="rank">TOP ${i + 1}</span>
+                    <div class="chip-name">${d.chinese_name}</div>
+                    <div class="chip-conf">${d.confidence}%</div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="mini-stats">
+                    <div class="mini-stat amber">
+                        <div class="mini-label">诊断结果</div>
+                        <div class="mini-value">${selected.chinese_name}</div>
+                    </div>
+                    <div class="mini-stat amber">
+                        <div class="mini-label">置信度</div>
+                        <div class="mini-value">${selected.confidence}%</div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-label">📊 Top 3 候选结果（点击查看详情）</div>
+                    <div class="top3-row">${top3Html}</div>
+                    <div class="top3-hint">💡 点击上方候选可切换查看对应病害的详细信息</div>
+                </div>
+
+                <div class="item-card disease-card" id="diseaseDetail">
+                    <div class="item-header">
+                        <div class="item-title"><span>🍃</span>${selected.chinese_name}</div>
+                        <span class="conf-badge">${selected.confidence}%</span>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <span class="crop-label">📍 ${selected.crop}</span>
+                    </div>
+                    <div class="info-block">
+                        <div class="info-label">🦠 致病原因</div>
+                        <div class="info-content">${selected.cause}</div>
+                    </div>
+                    <div class="info-block">
+                        <div class="info-label">📖 简介</div>
+                        <div class="info-content">${selected.intro}</div>
+                    </div>
+                    <div class="info-block">
+                        <div class="info-label">🔍 主要症状</div>
+                        <div class="info-content">${selected.symptoms}</div>
+                    </div>
+                    <div class="info-block">
+                        <div class="info-label">🌾 易感作物</div>
+                        <div class="tag-group">${crops}</div>
+                    </div>
+                    <div class="info-block">
+                        <div class="info-label">🌿 防治建议</div>
+                        <div class="treatment-box">${selected.treatment}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 点击 Top3 切换详情
+        function selectDiseaseCandidate(idx) {
+            if (!lastDiseaseResult) return;
+            const contentHtml = renderDisease(lastDiseaseResult, idx);
+            document.querySelector('.column-body').innerHTML = contentHtml;
+            // 平滑滚动到详情
+            document.getElementById('diseaseDetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    </script>
+</body>
+</html>
